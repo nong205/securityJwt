@@ -10,4 +10,9 @@ public class HomeController {
     public String home(){
         return "Welcome to Security Application";
     }
+
+    @GetMapping("/api")
+    public String secure(){
+        return "Welcome to Security platform secure";
+    }
 }

@@ -13,11 +13,14 @@ public class User {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Integer id;
 
-    private String fullName;
     private String email;
+    private String fullName;
 
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
+
+    @Embedded
+    private TwoFactorAuth twoFactorAuth = new TwoFactorAuth();
 
     private USER_ROLE role = USER_ROLE.ROLE_CUSTOMER;
 
