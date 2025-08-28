@@ -74,27 +74,27 @@ public class AuthController {
 
     }
 
-//login
+    //login
     @PostMapping("/signin")
     public ResponseEntity<AuthResponse> login(@RequestBody User user) throws Exception {
         String username = user.getEmail();
         String password = user.getPassword();
 
-        Authentication auth = authentication(username,password);
+        Authentication auth = authentication(username, password);
 
         SecurityContextHolder.getContext().setAuthentication(auth);
         String jwt = JwtProvider.generateToken(auth);
 
         User authUser = userRepository.findByEmail(username);
 
-        if(user.getTwoFactorAuth().isEnabled()){
+        if (user.getTwoFactorAuth().isEnabled()) {
             AuthResponse res = new AuthResponse();
             res.setMessage("Two factor auth is enabled");
             res.setTwoFactorAuthEnabled(true);
             String otp = OtpUtils.generateOtp();
 
             TwoFactorOTP oldTwoFactorOtp = twoFactorOtpService.findByUser(authUser.getId());
-            if(oldTwoFactorOtp != null){
+            if (oldTwoFactorOtp != null) {
                 twoFactorOtpService.deleteTwoFactorOtp(oldTwoFactorOtp);
             }
             TwoFactorOTP newTwoFactorOTP = twoFactorOtpService.createTwoFactorOtp(authUser, otp, jwt);
@@ -117,26 +117,36 @@ public class AuthController {
     private Authentication authentication(String username, String password) {
         UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-        if (userDetails == null){
-            throw new BadCredentialsException("invalid username " );
+        if (userDetails == null) {
+            throw new BadCredentialsException("invalid username ");
         }
-        if(!password.equals(userDetails.getPassword())){
-            throw new BadCredentialsException("invalid password" );
+        if (!password.equals(userDetails.getPassword())) {
+            throw new BadCredentialsException("invalid password");
         }
         return new UsernamePasswordAuthenticationToken(
                 username,
                 password,
                 userDetails.getAuthorities()
         );
-        }
-        public ResponseEntity<AuthResponse> verifySigninOtp(
+    }
+
+    @PostMapping("/two-factor/otp/{otp}")
+    public ResponseEntity<AuthResponse> verifySignInOtp(
             @PathVariable String otp,
             @RequestParam String id
-        ){
+    ) throws Exception {
+        TwoFactorOTP twoFactorOTP = twoFactorOtpService.findById(id);
 
-        return null;
+        if (twoFactorOtpService.verifyTwoFactorOtp(twoFactorOTP, otp)) {
+            AuthResponse res = new AuthResponse();
+            res.setMessage("Two factor authentication verified");
+            res.setTwoFactorAuthEnabled(true);
+            res.setJwt(twoFactorOTP.getJwt());
+            return new ResponseEntity<>(res, HttpStatus.OK);
         }
+        throw new Exception("Invalid OTP");
     }
+}
 
 
 
