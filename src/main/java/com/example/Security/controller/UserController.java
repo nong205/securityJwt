@@ -1,15 +1,22 @@
 package com.example.Security.controller;
 
+import com.example.Security.ForgotPasswordTokenRequest;
 import com.example.Security.domain.VerificationType;
+import com.example.Security.modal.ForgotPasswordToken;
 import com.example.Security.modal.User;
 import com.example.Security.modal.VerificationCode;
 import com.example.Security.service.EmailService;
+import com.example.Security.service.ForgotPasswordService;
 import com.example.Security.service.UserService;
 import com.example.Security.service.VerificationCodeService;
+import com.example.Security.util.OtpUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Random;
+import java.util.UUID;
 
 @RestController
 public class UserController {
@@ -18,6 +25,10 @@ public class UserController {
 
     @Autowired
     private VerificationCodeService verificationCodeService;
+
+
+    @Autowired
+    private ForgotPasswordService forgotPasswordService;
 
     @Autowired
     private EmailService emailService;
@@ -62,8 +73,38 @@ public class UserController {
             User updatedUser = userService.enableTwoFactorAuthentication(verificationCode.getVerificationType(),sendTo, user);
             verificationCodeService.deleteVerificationCodeById(verificationCode);
             return new ResponseEntity<>(updatedUser, HttpStatus.OK);
-
         }
        throw new Exception("otp is not correct");
+    }
+
+    @PostMapping("/auth/users/reset-password/send-otp")
+    public ResponseEntity<String> sendForgotPasswordOtp(
+            @RequestBody ForgotPasswordTokenRequest req)
+            throws Exception {
+
+        User user = userService.findUserByEmail(req.getSendTo());
+        String otp = OtpUtils.generateOtp();
+        UUID uuid = UUID.randomUUID();
+        String id = uuid.toString();
+
+        ForgotPasswordToken token = forgotPasswordService.findByUser(user.getId());
+
+        if(token == null){
+            token = forgotPasswordService.createToken(
+                    user,
+                    id,
+                    otp,
+                    req.getSendTo(),
+                    req.getVerificationType()
+            );
+
+                    if(req.getVerificationType().equals(VerificationType.EMAIL)){
+                        emailService.sendVerificationEmail(
+                                user.getEmail(),
+                                token.getOtp());
+                    }
+        }
+
+        return new ResponseEntity<>("ForgotPassWord otp send successfully", HttpStatus.OK);
     }
 }
