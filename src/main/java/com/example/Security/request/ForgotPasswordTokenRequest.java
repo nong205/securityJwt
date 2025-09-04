@@ -1,4 +1,4 @@
-package com.example.Security;
+package com.example.Security.request;
 
 import com.example.Security.domain.VerificationType;
 import lombok.Data;
